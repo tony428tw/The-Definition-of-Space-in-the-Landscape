@@ -2,7 +2,7 @@
 
 > An interactive parametric design studio for exploring how geometry, planting, walls, and sections shape landscape space.
 
-![The Definition of Space in the Landscape cover](assets/images/the-definition-of-space-in-the-landscape-cover.png)
+![The Definition of Space in the Landscape cover](assets/images/the-definition-of-space-in-the-landscape-cover.jpg)
 
 ## Overview
 
@@ -19,7 +19,7 @@ The project supports the course theme **“The Definition of Space in the Landsc
 | 03 | **Planting arrays** | Test tree grids, rows, and solitary planting; adjust quantity, spacing, offset, and alignment. |
 | 04 | **Walls & sections** | Introduce low walls and openings, then evaluate enclosure and spatial sequence through sections and axonometric drawings. |
 
-![The Definition of Space in the Landscape feature overview](assets/images/the-definition-of-space-in-the-landscape-feature-overview.png)
+![The Definition of Space in the Landscape feature overview](assets/images/the-definition-of-space-in-the-landscape-feature-overview.jpg)
 
 ## Core features
 
@@ -54,8 +54,8 @@ Designed for landscape and urban design education, the studio connects planar co
 the-definition-of-space-in-the-landscape/
 ├── assets/
 │   └── images/
-│       ├── the-definition-of-space-in-the-landscape-cover.png
-│       └── the-definition-of-space-in-the-landscape-feature-overview.png
+│       ├── the-definition-of-space-in-the-landscape-cover.jpg
+│       └── the-definition-of-space-in-the-landscape-feature-overview.jpg
 └── README.md
 ```
 
