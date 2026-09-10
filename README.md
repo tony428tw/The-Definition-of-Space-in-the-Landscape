@@ -1,6 +1,6 @@
 # The Definition of Space in the Landscape
 
-![The Definition of Space in the Landscape｜專案封面](assets/images/the-definition-of-space-in-the-landscape-feature-overview.jpg)
+![The Definition of Space in the Landscape｜專案封面](assets/images/the-definition-of-space-in-the-landscape-cover.jpg)
 
 > 景觀及都市設計・互動式參數設計工具  
 > 以地面分割、弧線、植栽與牆體，逐步探索景觀空間的秩序、尺度與圍塑關係。
@@ -13,7 +13,7 @@
 
 ## 核心功能
 
-![功能說明圖](assets/images/the-definition-of-space-in-the-landscape-cover.jpg)
+![功能說明圖](assets/images/the-definition-of-space-in-the-landscape-overview.jpg)
 
 ### STEP 01｜水平・垂直分割
 
