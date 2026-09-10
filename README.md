@@ -1,69 +1,107 @@
-# The Definition of Space in the Landscape
+# vinext-starter
 
-> 以互動參數設計探索「景觀中的空間如何被定義」：從地面分割、弧線、植栽配置到牆體與剖立面，將抽象構成轉化為可操作、可閱讀的空間設計過程。
+A clean full-stack starter running on
+[vinext](https://github.com/cloudflare/vinext), with optional Cloudflare D1 and
+Drizzle support.
 
-[![開啟測試網頁](https://img.shields.io/badge/開啟-測試網頁-1f6feb?style=for-the-badge)](https://landscape-space-studio.jerry428tw.chatgpt.site/)
+## Prerequisites
 
-**測試網頁：** [landscape-space-studio.jerry428tw.chatgpt.site](https://landscape-space-studio.jerry428tw.chatgpt.site/)
+- Node.js `>=22.13.0`
+- Linux with `flock`, `curl`, and GNU `timeout`
 
-![The Definition of Space in the Landscape 封面圖](assets/images/the-definition-of-space-in-the-landscape-cover.jpg)
+## Sites Lifecycle
 
-## 專案簡介
+The Sites lifecycle CLI runs the locked dependency install before returning this checkout. Edit the source under `app/`, then checkpoint when a coherent milestone is ready to inspect or share. The remote Sites builder runs `npm run build` against the pushed commit. Do not repeat install or build as a normal pre-checkpoint step.
 
-**The Definition of Space in the Landscape** 是為景觀及都市設計基礎課程開發的互動式參數設計工具。學生可從平面構圖出發，逐步加入弧線、樹木、牆體與開口，再以平面、剖立面與軸測圖檢視設計方案的秩序、尺度、動線與圍塑關係。
+This starter does not use `wrangler.jsonc`.
 
-本工具支援課程主題「景觀空間的定義」，以明確但具彈性的設計規則，協助學生反覆測試空間構成與設計判斷。
+`install:ci` is intentionally a single, non-retrying `npm ci`. It refuses a concurrent install for the same project, consumes a matching image-seeded npm cache with `--prefer-offline` while retaining registry fallback for a missing cache object, otherwise downloads and verifies the complete vinext tarball recorded in `package-lock.json`, limits npm to one socket, and terminates a stalled install. `build` applies a short timeout. These helpers target Linux and use GNU `timeout`; they are not native macOS scripts.
 
-## 設計流程
+Scripts that need writable project-scoped home, npm, XDG, and temporary paths use `scripts/sites-env.sh`. The `dev` and `start` scripts honor the caller's runtime environment and keep Wrangler logs inside the checkout. The generated `.sites-runtime/` directory is disposable and ignored by Git.
 
-| 階段 | 操作重點 | 學習目標 |
-| --- | --- | --- |
-| 01 | **水平／垂直分割** | 以可調整比例建立幾何秩序，發展不超過三色的平面構圖。 |
-| 02 | **弧線分割** | 從可理解的幾何錨點繪製圓弧，與直線分割共同形塑空間節奏。 |
-| 03 | **基地平面設計** | 以樹陣、樹列與孤植配置，測試株數、間距、偏移與對位關係。 |
-| 04 | **牆體・空間架構** | 加入低牆與開口，並以剖立面與軸測圖評估圍塑、穿透與空間序列。 |
+## Included Shape
 
-## 核心功能
+- edit site code under `app/`
+- `app/chatgpt-auth.ts` provides optional dispatch-owned ChatGPT sign-in helpers
+- `.openai/hosting.json` declares optional Sites D1 and R2 bindings
+- `vite.config.ts` simulates declared bindings for local development
+- `db/index.ts` reads the D1 binding from the Cloudflare Worker environment
+- `db/schema.ts` starts intentionally empty
+- `examples/d1/` contains an optional D1 example surface
+- `drizzle.config.ts` supports local migration generation when needed
 
-![功能說明圖](assets/images/the-definition-of-space-in-the-landscape-feature-overview.jpg)
+## Workspace Auth Headers
 
-- 可參數化調整的水平、垂直與曲線地面分割。
-- 可編輯的樹陣、樹列與孤植，支援間距與尺寸標註。
-- 牆體可沿分割線、基地邊界與曲線直覺放置，並可調整開口。
-- 多條可編輯剖面線，連動平面、剖立面與軸測圖檢視。
-- 平面、剖立面與軸測圖的縮放、比例尺與 PNG 匯出。
-- 圖層顯示、鎖定、排序、複製與刪除管理。
+OpenAI workspace sites can read the current user's email from
+`oai-authenticated-user-email`.
 
-## 空間構成規則
+SIWC-authenticated workspace sites may also receive
+`oai-authenticated-user-full-name` when the user's SIWC profile has a non-empty
+`name` claim. The full-name value is percent-encoded UTF-8 and is accompanied by
+`oai-authenticated-user-full-name-encoding: percent-encoded-utf-8`.
 
-工具透過基本限制，使設計判斷與空間語彙更清晰：
+Treat the full name as optional and fall back to email when it is absent:
 
-- 地面構圖最多使用三種色彩。
-- 牆體高度不超過 **2.4 m**。
-- 可移動牆體總長度不超過基地限制長度的 **1/4**。
-- 牆體開口總面積不超過 **12 m²**，並鼓勵以更少開口創造更清楚的空間結構。
+```tsx
+import { headers } from "next/headers";
 
-## 教學應用
+export default async function Home() {
+  const requestHeaders = await headers();
+  const email = requestHeaders.get("oai-authenticated-user-email");
+  const encodedFullName = requestHeaders.get("oai-authenticated-user-full-name");
+  const fullName =
+    encodedFullName &&
+    requestHeaders.get("oai-authenticated-user-full-name-encoding") ===
+      "percent-encoded-utf-8"
+      ? decodeURIComponent(encodedFullName)
+      : null;
 
-適合景觀及都市設計的基礎構成與空間設計課程，協助學生練習：
-
-- 空間定義與視覺秩序；
-- 植栽作為空間結構元素；
-- 動線、滲透性與圍塑關係；
-- 在平面、剖立面與軸測圖之間一致地閱讀設計。
-
-## 專案結構
-
-```text
-The-Definition-of-Space-in-the-Landscape/
-├── app/                 # 互動設計工具主要元件與幾何邏輯
-├── public/              # 圖示、社群預覽圖與靜態資源
-├── worker/              # 部署用 Worker
-├── tests/               # 牆體與渲染測試
-├── assets/images/       # README 封面與功能說明圖
-└── README.md
+  const displayName = fullName ?? email;
+  // ...
+}
 ```
 
-## 授權
+## Optional Dispatch-Owned ChatGPT Sign-In
 
-Copyright © 2026 Jerry Hsu. All rights reserved.
+Import the ready-to-use helpers from `app/chatgpt-auth.ts` when the site needs
+optional or required ChatGPT sign-in:
+
+- Use `getChatGPTUser()` for optional signed-in UI.
+- Use `requireChatGPTUser(returnTo)` for server-rendered pages that should send
+  anonymous visitors through Sign in with ChatGPT.
+- Use `chatGPTSignInPath(returnTo)` and `chatGPTSignOutPath(returnTo)` for
+  browser links or actions.
+- Pass a same-origin relative `returnTo` path for the destination after sign-in
+  or sign-out. The helper validates and safely encodes it.
+- Mark protected pages with `export const dynamic = "force-dynamic"` because
+  they depend on per-request identity headers.
+
+Dispatch owns `/signin-with-chatgpt`, `/signout-with-chatgpt`, `/callback`, the
+OAuth cookies, and identity header injection. Do not implement app routes for
+those reserved paths. Routes that do not import and call the helper remain
+anonymous-compatible.
+
+SIWC establishes identity only; it does not prove workspace membership. Use the
+Sites hosting platform's access policy controls for workspace-wide restrictions,
+or enforce explicit server-side membership or allowlist checks.
+
+Use SIWC for account pages, user-specific dashboards, saved records, and write
+actions tied to the current ChatGPT user. Leave public content anonymous.
+
+## Diagnostic Commands
+
+- `npm run install:ci`: perform the one bounded lockfile install
+- `npm run dev`: start the Vite/Vinext development server
+- `npm run build`: build the deployable Sites artifact
+- `npm run start`: start the built Vinext application
+- `npm test`: build and verify the rendered development-preview metadata
+- `npm run db:generate`: generate Drizzle migrations after schema changes
+
+Use build commands for targeted diagnosis after a remote failure, not as part of the normal checkpoint path.
+
+The timeout defaults can be overridden for a controlled canary with `SITES_INSTALL_TIMEOUT`, `SITES_INSTALL_KILL_AFTER`, `SITES_BUILD_TIMEOUT`, and `SITES_BUILD_KILL_AFTER`. A timeout fails the command; the helpers never retry an unchanged install or build.
+
+## Learn More
+
+- [vinext Documentation](https://github.com/cloudflare/vinext)
+- [Drizzle D1 Guide](https://orm.drizzle.team/docs/get-started/d1-new)
