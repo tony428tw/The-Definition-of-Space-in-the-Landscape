@@ -8,6 +8,8 @@
 
 ![The Definition of Space in the Landscape 封面圖](assets/images/the-definition-of-space-in-the-landscape-cover.jpg)
 
+![功能說明圖](assets/images/the-definition-of-space-in-the-landscape-feature-overview.jpg)
+
 ## 專案簡介
 
 **The Definition of Space in the Landscape** 是為景觀及都市設計基礎課程開發的互動式參數設計工具。學生可從平面構圖出發，逐步加入弧線、樹木、牆體與開口，再以平面、剖立面與軸測圖檢視設計方案的秩序、尺度、動線與圍塑關係。
@@ -22,8 +24,6 @@
 | 02 | **弧線分割** | 從可理解的幾何錨點繪製圓弧，與直線分割共同形塑空間節奏。 |
 | 03 | **基地平面設計** | 以樹陣、樹列與孤植配置，測試株數、間距、偏移與對位關係。 |
 | 04 | **牆體・空間架構** | 加入低牆與開口，並以剖立面與軸測圖評估圍塑、穿透與空間序列。 |
-
-![功能說明圖](assets/images/the-definition-of-space-in-the-landscape-feature-overview.jpg)
 
 ## 核心功能
 
