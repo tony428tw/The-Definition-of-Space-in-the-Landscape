@@ -1,6 +1,7 @@
 "use client";
 
 import { useMemo, useRef, useState } from "react";
+import {siteDimensions} from "./site-dimensions";
 import SectionView from "./SectionView";
 import AxonView from "./AxonView";
 import {useDrawingViewport,DrawingScale,ViewportExportBounds} from "./DrawingViewport";
@@ -17,30 +18,37 @@ type CenterKind = "intersection" | "line" | "edge" | "extension";
 type CenterChoice = { point: Point; label: string };
 type DivisionLine = { axis: "vertical" | "horizontal"; value: number; from: number; to: number };
 type ArcSide = "right" | "down" | "left" | "up";
-type PaperPreset = { label: string; short: string; width: number; height: number };
-type RatioModule = { value: number; label: string; weight: number };
+type PaperPreset = { label: string; short: string; width: number; height: number; description?: string };
+type RatioModule = { value: number; label: string; weight: number; group: string; description: string };
 type TreeArrayShape = { columns: number; rows: number };
-type PlantingType = "array" | "row" | "single";
+type PlantingType = "array" | "row" | "single" | "grove";
 type RowGuide = "split" | "arc" | "edge";
 type TreePoint = Point & { type: PlantingType };
-type PlantingPlacementMode = "array" | "single" | null;
+type PlantingPlacementMode = "array" | "single" | "grove" | null;
 
-const papers: PaperPreset[] = [
-  { label: "1 : √1 = 1 : 1｜29.7 × 29.7 cm", short: "1 : √1", width: 29.7, height: 29.7 },
-  { label: "1 : √2 = 1 : 1.414｜21.0 × 29.7 cm", short: "1 : √2", width: 21, height: 29.7 },
-  { label: "1 : √3 = 1 : 1.732｜17.1 × 29.7 cm", short: "1 : √3", width: 29.7 / Math.sqrt(3), height: 29.7 },
-  { label: "1 : √4 = 1 : 2｜14.9 × 29.7 cm", short: "1 : √4", width: 14.85, height: 29.7 },
-  { label: "1 : √5 = 1 : 2.236｜13.3 × 29.7 cm", short: "1 : √5", width: 29.7 / Math.sqrt(5), height: 29.7 },
-  { label: "1 : √6 = 1 : 2.449｜12.1 × 29.7 cm", short: "1 : √6", width: 29.7 / Math.sqrt(6), height: 29.7 },
+const rootDescriptions = [
+  "正方形：穩定、封閉，沒有明顯方向性。可用內部非對稱分割建立視覺張力。√1 = 1，屬有理數比例。",
+  "DIN／A 系列基礎比例：約 1:1.414，平衡且有方向性，適合多欄網格。沿長邊中點對折後仍為 √2 比例，有利於紙張分切與等比縮放；不代表所有印刷作業皆零廢料。",
+  "微長矩形：約 1:1.732，延伸縱深，適合多層次節奏與直立構圖；橫放則強化水平流動。",
+  "雙正方形：1:2，可分為兩個正方形，秩序清楚、適合二元構圖與全景展開。√4 = 2，屬有理數比例。",
+  "動態矩形：約 1:2.236，方向引導與延展感鮮明。與黃金比例 φ = (1 + √5) / 2 有關，但 √5 本身不是黃金比例。",
+  "窄長矩形：約 1:2.449，方向性與視覺張力強，適合帶狀構圖、特殊摺頁與實驗版面。",
 ];
+const papers: PaperPreset[] = Array.from({length: 6}, (_, i) => {
+  const n = i + 1, ratio = Math.sqrt(n);
+  const width = Math.min(21, 29.7 / ratio), height = width * ratio;
+  return {short: `1 : √${n}`, label: `1 : √${n} = 1 : ${ratio.toFixed(3)}｜${width.toFixed(1)} × ${height.toFixed(1)} cm`, width, height, description: rootDescriptions[i]};
+});
 const ratioModules: RatioModule[] = [
-  { value: 1, label: "1 : √1", weight: 1 },
-  { value: 2, label: "1 : √2", weight: Math.sqrt(2) },
-  { value: 3, label: "1 : √3", weight: Math.sqrt(3) },
-  { value: 4, label: "1 : √4", weight: 2 },
-  { value: 5, label: "1 : √5", weight: Math.sqrt(5) },
-  { value: 6, label: "1 : √6", weight: Math.sqrt(6) },
+  ...rootDescriptions.map((description, i) => ({value: i + 1, label: `1 : √${i + 1}`, weight: Math.sqrt(i + 1), group: "根號矩形", description})),
+  {value: 7, label: "1 : 2", weight: 2, group: "有理數比例（整數比）", description: "古典度量與模組分割常見的整數比：穩定、容易辨識，可分為兩個相同單元。與 1:√4 等值，兩者擇一選取。"},
+  {value: 8, label: "2 : 3", weight: 3 / 2, group: "有理數比例（整數比）", description: "以 2 與 3 個等長單元建立比例，便於模組化分割。視覺穩定、適度延展；是否對稱仍取決於構圖安排。"},
+  {value: 9, label: "3 : 4", weight: 4 / 3, group: "有理數比例（整數比）", description: "以 3 與 4 個等長單元建立比例，接近正方形，呈現緊湊、均衡且易於度量的理性秩序。"},
+  {value: 10, label: "1 : φ ≈ 1 : 1.618", weight: (1 + Math.sqrt(5)) / 2, group: "無理數比例｜黃金比例", description: "φ = (1 + √5) / 2 ≈ 1.618，可由正方形、線段與圓弧作圖取得。常用來探索整體與局部的和諧關係；美感仍取決於配置與情境，並非普遍保證。"},
 ];
+function RatioInfo({id, title, children}: {id: string; title: string; children: React.ReactNode}) {
+  return <><button type="button" className="ratio-info" popoverTarget={id} aria-label={`${title}說明`}>ⓘ</button><div id={id} popover="auto" className="ratio-popover"><header><b>{title}</b><button type="button" popoverTarget={id} popoverTargetAction="hide" aria-label="關閉說明">×</button></header>{children}</div></>;
+}
 const palettes = [
   { name: "蒙德里安", colors: ["#0a4f8a", "#f1cf21", "#c83b2d"] },
   { name: "Sunset Bliss", colors: ["#f6a192", "#f06489", "#f8c5c8"] },
@@ -63,7 +71,14 @@ const plantingOptions: { id: PlantingType; label: string; weight: number; minimu
   { id: "array", label: "樹陣", weight: 6, minimum: 4 },
   { id: "row", label: "樹列", weight: 4, minimum: 3 },
   { id: "single", label: "孤植", weight: 1, minimum: 1 },
+  { id: "grove", label: "自然式叢植", weight: 5, minimum: 3 },
 ];
+
+const branchExperiences: Record<number,string> = {
+  1.5: "低枝下高形成明顯包覆與遮蔽，視線較受限制，行為上偏向停留、倚靠與繞行；不宜置於主要通行淨空帶。",
+  3: "接近舒適的人行空間尺度，可維持遮蔭與圍合，同時容許多數視線及活動穿越，適合步道與停留空間。",
+  4.5: "高枝下高使林下通透、視線延伸，方向辨識與穿越自由度高，適合強調流動、開敞與遠景連接。",
+};
 
 function seededRandom(seed: number) {
   let value = seed % 2147483647;
@@ -409,19 +424,21 @@ export default function Home() {
   const [rowAlong,setRowAlong]=useState(0);
   const rowDrag=useRef<{pointerId:number;x:number;y:number;offset:number;along:number}|null>(null);
   const [arcs, setArcs] = useState<ArcSpec[]>([]), [pickCenter, setPickCenter] = useState(false), [showArcPreview, setShowArcPreview] = useState(true);
-  const [siteWidth, setSiteWidth] = useState(29.7), [siteHeight, setSiteHeight] = useState(29.7);
+  const [siteEnlargement,setSiteEnlargement]=useState(1);
+  const {width:siteWidth,height:siteHeight}=siteDimensions(papers[paperIndex],siteEnlargement);
   const wallEditor=useWallEditor(siteWidth,siteHeight);
   const wallEditing=step===4&&controlTab==="wall";
-  const [crownHeight, setCrownHeight] = useState(8), [trunkHeight, setTrunkHeight] = useState(3), [plantingTypes, setPlantingTypes] = useState<PlantingType[]>(["array"]);
+  const [treeHeight, setTreeHeight] = useState(8), [trunkHeight, setTrunkHeight] = useState(3), [dbhCm, setDbhCm] = useState(25), [plantingTypes, setPlantingTypes] = useState<PlantingType[]>(["array"]);
   const [arrayRows, setArrayRows] = useState(3), [arrayColumns, setArrayColumns] = useState(4), [arrayRowSpacing, setArrayRowSpacing] = useState(4), [arrayColumnSpacing, setArrayColumnSpacing] = useState(4);
   const [arrayAnchor, setArrayAnchor] = useState<Point>({ x: .38, y: .38 });
   const [rowRows, setRowRows] = useState(1), [rowColumns, setRowColumns] = useState(6), [rowRowSpacing, setRowRowSpacing] = useState(4), [rowColumnSpacing, setRowColumnSpacing] = useState(4);
   const [singlePositions, setSinglePositions] = useState<Point[]>([{ x: .72, y: .62 }]), [selectedSingleIndex, setSelectedSingleIndex] = useState(0), [plantingPlacementMode, setPlantingPlacementMode] = useState<PlantingPlacementMode>(null);
+  const [groveCount,setGroveCount]=useState(8),[groveSpread,setGroveSpread]=useState(8),[groveAnchor,setGroveAnchor]=useState<Point>({x:.55,y:.42});
   const [rowGuide, setRowGuide] = useState<RowGuide>("split"), [rowGuideIndex, setRowGuideIndex] = useState(0), [rowOffset, setRowOffset] = useState(0);
-  const [layerLocks,setLayerLocks]=useState({array:false,row:false,single:false,section:false});
+  const [layerLocks,setLayerLocks]=useState({array:false,row:false,single:false,grove:false,section:false});
   const [lockedTrees,setLockedTrees]=useState<Partial<Record<PlantingType,Point[]>>>({});
-  const plantDrag=useRef<{type:"array"|"single";index:number;pointerId:number}|null>(null);
-  const anyPlantLocked=layerLocks.array || layerLocks.row || layerLocks.single;
+  const plantDrag=useRef<{type:"array"|"single"|"grove";index:number;pointerId:number}|null>(null);
+  const anyPlantLocked=layerLocks.array || layerLocks.row || layerLocks.single || layerLocks.grove;
   const anyLayerLocked=anyPlantLocked || layerLocks.section || wallEditor.walls.length>0;
   const [sectionLines, setSectionLines] = useState<SectionLine[]>([]);
   const [selectedSection, setSelectedSection] = useState<number|null>(null);
@@ -503,14 +520,13 @@ export default function Home() {
   const selectedRowLine = selectedRowLineSource[rowGuideIndex % Math.max(1, selectedRowLineSource.length)];
   const selectedRowArc = displayArcs[rowGuideIndex % Math.max(1, displayArcs.length)];
   const wallGuides = [...[...internalDivisionLines,...siteEdges].map((l,i)=>({label:`${i<internalDivisionLines.length?'分割線':'邊界線'} ${i<internalDivisionLines.length?i+1:i-internalDivisionLines.length+1}・${l.axis==='horizontal'?'水平':'垂直'}`,a:l.axis==='horizontal'?{x:(l.from-xOffset)/sitePreviewScale,y:(l.value-yOffset)/sitePreviewScale}:{x:(l.value-xOffset)/sitePreviewScale,y:(l.from-yOffset)/sitePreviewScale},b:l.axis==='horizontal'?{x:(l.to-xOffset)/sitePreviewScale,y:(l.value-yOffset)/sitePreviewScale}:{x:(l.value-xOffset)/sitePreviewScale,y:(l.to-yOffset)/sitePreviewScale}})), ...arcs.flatMap((arc,i)=>{const points=Array.from({length:Math.max(2,Math.ceil(arc.sweep)+1)},(_,j)=>{const angle=(arc.start+(arc.clockwise?1:-1)*arc.sweep*j/Math.ceil(arc.sweep))*Math.PI/180;return{x:(arc.center.x+arc.radius*Math.cos(angle)-paperXOffset)/paperDisplayWidth*siteWidth,y:(arc.center.y+arc.radius*Math.sin(angle)-paperYOffset)/paperDisplayHeight*siteHeight};});return clipGuide(points,siteWidth,siteHeight).map((path,j)=>({a:path[0],b:path[path.length-1],path,label:`弧線 ${i+1}・曲牆${j?'・段 '+(j+1):''}`}));})];
-  const printArea = siteWidth * siteHeight;
-  const minimumSiteArea = paper.width * paper.height;
-  const siteValid = siteWidth >= paper.width && siteHeight >= paper.height;
   const plantingLabel = plantingOptions.filter(option => plantingTypes.includes(option.id)).map(option => option.label).join("＋") || "尚未配置";
   const trees = useMemo(() => {
-    const points: TreePoint[] = (["array","row","single"] as PlantingType[]).flatMap(type=>layerLocks[type] ? (lockedTrees[type]??[]).map(p=>({x:xOffset+p.x*displayWidth,y:yOffset+p.y*displayHeight,type})) : []);
+    const points: TreePoint[] = (["array","row","single","grove"] as PlantingType[]).flatMap(type=>layerLocks[type] ? (lockedTrees[type]??[]).map(p=>({x:xOffset+p.x*displayWidth,y:yOffset+p.y*displayHeight,type})) : []);
     const crownRadius = Math.max(14, 2 / siteWidth * displayWidth);
-    const full = { left: xOffset + crownRadius + 9, right: xOffset + displayWidth - crownRadius - 9, top: yOffset + crownRadius + 9, bottom: yOffset + displayHeight - crownRadius - 9 };
+    // Only the trunk centre is constrained to the field. The 4 m crown may extend
+    // beyond the boundary, as it does in real planting plans.
+    const full = { left: xOffset, right: xOffset + displayWidth, top: yOffset, bottom: yOffset + displayHeight };
     const add = (x: number, y: number, type: PlantingType, clampToSite = true) => {
       if (points.length >= 20) return false;
       if (type === "row" && effectiveRowGuide === "edge") {
@@ -587,8 +603,19 @@ export default function Home() {
     if (plantingTypes.includes("single") && !layerLocks.single) {
       singlePositions.forEach(position => add(xOffset + position.x * displayWidth, yOffset + position.y * displayHeight, "single"));
     }
+    if (plantingTypes.includes("grove") && !layerLocks.grove) {
+      // Deterministic phyllotaxis produces an irregular but deliberate cluster;
+      // alternating radii create dense and open pockets without looking random.
+      for(let i=0;i<groveCount;i+=1){
+        const angle=i*2.399963229728653,ring=Math.sqrt((i+.35)/Math.max(1,groveCount));
+        const variation=.7+((i*37)%11)/25;
+        const dx=Math.cos(angle)*groveSpread*ring*variation/siteWidth*displayWidth;
+        const dy=Math.sin(angle)*groveSpread*ring*(.65+((i*19)%7)/20)/siteHeight*displayHeight;
+        add(xOffset+groveAnchor.x*displayWidth+dx,yOffset+groveAnchor.y*displayHeight+dy,"grove");
+      }
+    }
     return points;
-  }, [layerLocks, lockedTrees, plantingTypes, arrayRows, arrayColumns, arrayRowSpacing, arrayColumnSpacing, arrayAnchor, rowRows, rowColumns, rowRowSpacing, rowColumnSpacing, singlePositions, siteWidth, siteHeight, displayWidth, displayHeight, xOffset, yOffset, effectiveRowGuide, selectedRowArc, selectedRowLine, rowOffset,rowAlong]);
+  }, [layerLocks, lockedTrees, plantingTypes, arrayRows, arrayColumns, arrayRowSpacing, arrayColumnSpacing, arrayAnchor, rowRows, rowColumns, rowRowSpacing, rowColumnSpacing, singlePositions, groveCount, groveSpread, groveAnchor, siteWidth, siteHeight, displayWidth, displayHeight, xOffset, yOffset, effectiveRowGuide, selectedRowArc, selectedRowLine, rowOffset,rowAlong]);
   const exportTreeRadius=Math.max(14,2/siteWidth*displayWidth)+18;
   const wallExportMargin=step===4&&wallEditor.walls.length?sitePreviewScale*.1:0;
   const exportLeft=Math.min(xOffset-wallExportMargin,...trees.map(t=>t.x-exportTreeRadius));
@@ -599,10 +626,11 @@ export default function Home() {
   const planViewWidth=Math.max(1000,exportRight)-planViewLeft,planViewHeight=Math.max(700,exportBottom)-planViewTop;
   const paperViewLeft=Math.min(0,paperXOffset-90),paperViewTop=Math.min(0,paperYOffset-90);
   const planViewport=useDrawingViewport(step>=3?{x:planViewLeft,y:planViewTop,width:planViewWidth,height:planViewHeight+70}:{x:paperViewLeft,y:paperViewTop,width:Math.max(1000,paperXOffset+paperDisplayWidth+90)-paperViewLeft,height:Math.max(700,paperYOffset+paperDisplayHeight+90)-paperViewTop});
-  const placedTreeCounts = trees.reduce<Record<PlantingType, number>>((counts, tree) => ({ ...counts, [tree.type]: counts[tree.type] + 1 }), { array: 0, row: 0, single: 0 });
+  const placedTreeCounts = trees.reduce<Record<PlantingType, number>>((counts, tree) => ({ ...counts, [tree.type]: counts[tree.type] + 1 }), { array: 0, row: 0, single: 0, grove: 0 });
   const requestedTreeCount = (plantingTypes.includes("array") ? arrayRows * arrayColumns : 0)
     + (plantingTypes.includes("row") ? rowRows * rowColumns : 0)
-    + (plantingTypes.includes("single") ? singlePositions.length : 0);
+    + (plantingTypes.includes("single") ? singlePositions.length : 0)
+    + (plantingTypes.includes("grove") ? groveCount : 0);
   const treeCountMessage = trees.length === 0
     ? "尚未配置植栽。"
     : trees.length < 12
@@ -641,15 +669,15 @@ export default function Home() {
     setPlantingPlacementMode(null);setDrawingSection(false);setDraftSection([]);
     sectionDrag.current=null;plantDrag.current=null;rowDrag.current=null;
   }
-  function updatePlantPosition(type:"array"|"single",index:number,p:Point) {
+  function updatePlantPosition(type:"array"|"single"|"grove",index:number,p:Point) {
     if(layerLocks[type]) return;
-    const radius=Math.max(14,2/siteWidth*displayWidth)+9;
-    let hx=radius/displayWidth,hy=radius/displayHeight;
-    if(type==="array") {hx=Math.min(.5,(arrayColumns-1)*arrayColumnSpacing/2/siteWidth+radius/displayWidth);hy=Math.min(.5,(arrayRows-1)*arrayRowSpacing/2/siteHeight+radius/displayHeight);}
+    let hx=0,hy=0;
+    if(type==="array") {hx=Math.min(.5,(arrayColumns-1)*arrayColumnSpacing/2/siteWidth);hy=Math.min(.5,(arrayRows-1)*arrayRowSpacing/2/siteHeight);}
+    if(type==="grove") {hx=Math.min(.5,groveSpread/siteWidth);hy=Math.min(.5,groveSpread/siteHeight);}
     const value={x:Math.max(hx,Math.min(1-hx,p.x)),y:Math.max(hy,Math.min(1-hy,p.y))};
-    if(type==="array") setArrayAnchor(value);else setSinglePositions(items=>items.map((old,i)=>i===index?value:old));
+    if(type==="array") setArrayAnchor(value);else if(type==="grove")setGroveAnchor(value);else setSinglePositions(items=>items.map((old,i)=>i===index?value:old));
   }
-  function beginPlantDrag(event:React.PointerEvent<SVGCircleElement>,type:"array"|"single",index:number) {
+  function beginPlantDrag(event:React.PointerEvent<SVGCircleElement>,type:"array"|"single"|"grove",index:number) {
     if(layerLocks[type]) return;
     event.preventDefault();event.stopPropagation();
     setDrawingSection(false);setDraftSection([]);setPlantingPlacementMode(type);setSelectedSingleIndex(index);
@@ -734,8 +762,8 @@ export default function Home() {
     }
     if (!wallEditing && step >= 3 && plantingPlacementMode && !layerLocks[plantingPlacementMode]) {
       const normalized = {
-        x: Math.max(.04, Math.min(.96, (point.x - xOffset) / displayWidth)),
-        y: Math.max(.04, Math.min(.96, (point.y - yOffset) / displayHeight)),
+        x: Math.max(0, Math.min(1, (point.x - xOffset) / displayWidth)),
+        y: Math.max(0, Math.min(1, (point.y - yOffset) / displayHeight)),
       };
       updatePlantPosition(plantingPlacementMode,selectedSingleIndex,normalized);
       return;
@@ -757,7 +785,7 @@ export default function Home() {
     setPaletteIndex(palettes.length);
   }
   function toggleRatioModule(value: number) {
-    setActiveModules(items => items.includes(value) ? (items.length === 1 ? items : items.filter(item => item !== value)) : [...items, value].sort((a, b) => a - b));
+    setActiveModules(items => items.includes(value) ? (items.length === 1 ? items : items.filter(item => item !== value)) : [...items.filter(item => !((value === 7 && item === 4) || (value === 4 && item === 7))), value].sort((a, b) => a - b));
   }
   function togglePlantingType(type: PlantingType) {
     setPlantPanel(type);
@@ -778,12 +806,11 @@ export default function Home() {
     setPlantingPlacementMode(null);
     setSelectedSingleIndex(0);
   }
-  const placementPoint = plantingPlacementMode === "array" ? arrayAnchor : (singlePositions[selectedSingleIndex] ?? { x: .5, y: .5 });
+  const placementPoint = plantingPlacementMode === "array" ? arrayAnchor : plantingPlacementMode === "grove" ? groveAnchor : (singlePositions[selectedSingleIndex] ?? { x: .5, y: .5 });
   function choosePaper(index: number) {
-    const nextPaper = papers[index];
+    if(anyLayerLocked||arcEditorLocked||lockedArcs.length>0)return;
     setPaperIndex(index);
-    setSiteWidth(Number(nextPaper.width.toFixed(2)));
-    setSiteHeight(Number(nextPaper.height.toFixed(2)));
+    setSiteEnlargement(1);
   }
   function saveArc() {
     if(arcInputLocked||!showArcPreview)return;
@@ -799,7 +826,7 @@ export default function Home() {
   function changeStep(nextStep: number) {
     if (nextStep!==2 && step===2)saveArc();
     setStep(nextStep);planViewport.reset();setViewTab("plan");setPlantingPlacementMode(null);setDrawingSection(false);setDraftSection([]);
-    if(nextStep===4)setControlTab("wall");else if(controlTab==="wall")setControlTab("plant");
+    if(nextStep===4){wallEditor.begin();setControlTab("wall");}else if(controlTab==="wall")setControlTab("plant");
   }
   const exportImage = () => downloadSvgAsPng(svgRef.current, `景觀空間定義_作業一-${step}.png`);
 
@@ -825,9 +852,9 @@ export default function Home() {
 <p>{step === 1 ? "先確立底紙與色彩，再由水平、垂直線建立清楚的主從關係。" : step === 2 ? "設定合法圓心、半徑、起點方向、轉過角度與旋轉方向，讓弧形完整切入既有秩序。" : "在 1/100 基地中，以同規格喬木測試空間容量、節奏與邊界。"}</p>
 </div>
         {step === 1 && <>
-{(arcEditorLocked||lockedArcs.length>0||wallEditor.walls.length>0)&&<p>底圖被弧線鎖定或牆體配置保護；請先解鎖弧線／清除牆體後修改。</p>}<fieldset disabled={arcEditorLocked||lockedArcs.length>0||wallEditor.walls.length>0} style={{border:0,padding:0,minWidth:0}}>
+{(arcEditorLocked||lockedArcs.length>0||anyLayerLocked)&&<p>底紙尺寸受鎖定圖層或牆體配置保護；請先解鎖相關圖層／清除牆體後修改。</p>}<fieldset disabled={arcEditorLocked||lockedArcs.length>0||anyLayerLocked} style={{border:0,padding:0,minWidth:0}}>
 <ControlRow label="底紙比例" value={papers[paperIndex].short}>
-<select value={paperIndex} onChange={e => choosePaper(Number(e.target.value))}>{papers.map((item,index) => <option value={index} key={item.label}>{item.label}</option>)}</select>
+<div className="paper-choice"><select aria-label="底紙比例" value={paperIndex} onChange={e => choosePaper(Number(e.target.value))}>{papers.map((item,index) => <option value={index} key={item.label}>{item.label}</option>)}</select><RatioInfo id="paper-info" title={`${paper.short}｜版面幾何特性與視覺感受`}><p>{paper.description}</p><p>以單張 A4（21 × 29.7 cm）向內裁切，尺寸為短邊 × 長邊。1:√1 為 21 × 21 cm；1:√2 為 A4（毫米規格取整）。√3～√6 固定長邊 29.7 cm，依比例收窄短邊。</p></RatioInfo></div><p className="paper-note">A4 範圍內裁切（21 × 29.7 cm）；正方形為 21 × 21 cm。</p>
 </ControlRow>
 <ControlRow label="分割區域" value={`${splitCount} 區`}>
 <input type="range" min="4" max="16" value={splitCount} onChange={e => setSplitCount(Number(e.target.value))}/>
@@ -837,8 +864,8 @@ export default function Home() {
 <b>比例模組組合</b>
 <em>{activeModules.length} 組已選</em>
 </span>
-<p>可多選 1 : √1 至 1 : √6；系統將其轉為主區塊、次區塊與帶狀節奏的比例。</p>
-<div className="module-grid">{ratioModules.map(module => <button key={module.value} className={activeModules.includes(module.value) ? "selected" : ""} onClick={() => toggleRatioModule(module.value)}>{module.label}</button>)}</div>
+<p>可多選比例作為次分割的兩側長度比，形成主、次與帶狀節奏。點選 ⓘ 查看幾何特性。</p>
+{["根號矩形", "有理數比例（整數比）", "無理數比例｜黃金比例"].map(group => <div className="ratio-group" key={group}><h3>{group}</h3><div className="module-grid">{ratioModules.filter(module => module.group === group).map(module => <div className="module-option" key={module.value}><button type="button" aria-pressed={activeModules.includes(module.value)} className={activeModules.includes(module.value) ? "selected" : ""} onClick={() => toggleRatioModule(module.value)}>{module.label}</button><RatioInfo id={`module-info-${module.value}`} title={`${module.label}｜${group}`}><p>{module.description}</p><p>用於次分割兩側長度之比；不保證每個最終色塊均為此矩形比例。根號系列中，只有 √2 對折後保持原比例；√1 與 √4 為有理數。</p></RatioInfo></div>)}</div></div>)}
 </div>
 <div className="fixed-rule">
 <span>
@@ -939,35 +966,28 @@ export default function Home() {
 <button className="primary" onClick={()=>{if(showArcPreview)saveArc();else setShowArcPreview(true);}}>{showArcPreview?(editingArc===null?"加入此弧形":"儲存修改"):"預覽修改"}</button>
 </div>
 </fieldset></>}
-        {step >= 3 && <><div className="tool-tabs">{[...(step===4?[["wall","牆體"]]:[]),["plant","植栽"],["site","基地"],["section","剖面"],["layers","圖層"]].map(([id,label])=><button key={id} className={controlTab===id?"selected":""} onClick={()=>{setControlTab(id);setPlantingPlacementMode(null);setDrawingSection(false);setDraftSection([]);if(id==="plant"||id==="wall")setViewTab("plan");}}>{label}</button>)}</div>{step===4&&<div hidden={controlTab!=="wall"}>{wallEditor.controls(wallGuides,trees.map(t=>({x:(t.x-xOffset)/sitePreviewScale,y:(t.y-yOffset)/sitePreviewScale})))}</div>}<div hidden={controlTab!=="layers"}>
-<div style={{borderBottom:"1px solid #c9d2ca",paddingBottom:16,marginBottom:16}}><b>圖層鎖定</b>{step===4&&<label><input type="checkbox" checked={wallEditor.locked} onChange={e=>wallEditor.setLocked(e.target.checked)}/> 圍牆圖層</label>}<p style={{fontSize:14}}>底圖承接 STEP 01／02。鎖定圖層仍顯示，位置與配置不受其他植栽調整影響；共用基地尺寸及樹木規格需解鎖後修改。</p>{([{id:"array",label:"樹陣"},{id:"row",label:"樹列"},{id:"single",label:"孤植"},{id:"section",label:"剖面線"}] as const).map(layer=><label key={layer.id} style={{display:"flex",justifyContent:"space-between",padding:"8px 0",fontSize:16}}><span>{layer.label}</span><span><input type="checkbox" checked={layerLocks[layer.id]} onChange={()=>toggleLayer(layer.id)}/> {layerLocks[layer.id]?"已鎖定":"可編輯"}</span></label>)}<p style={{fontSize:14}}>直接拖曳藍色控制點即可選取植栽並持續定位；點選基地可連續移動目前植栽。「結束連續定位」或選取剖面即可切換操作。</p></div>
-</div><div hidden={controlTab!=="site"}><div className={`validation ${siteValid ? "pass" : "fail"}`}>
-<b>{siteValid ? `✓ 已承接 ${paper.short} 比例` : `! 基地小於 ${paper.short} 基準`}</b>
-<span>STEP 01／02：{paper.width.toFixed(1)} × {paper.height.toFixed(1)} cm<br/>STEP 03（1/100）：{siteWidth.toFixed(1)} × {siteHeight.toFixed(1)} m・{printArea.toFixed(1)} m²／基準 {minimumSiteArea.toFixed(1)} m²</span>
-</div>
-<div className="dimension-grid">
-<ControlRow label="基地寬度" value={`${siteWidth} m`}>
-<input disabled={anyLayerLocked} type="number" min={paper.width.toFixed(2)} step="0.1" value={siteWidth} onChange={e => setSiteWidth(Math.max(paper.width,Number(e.target.value)||paper.width))}/>
-</ControlRow>
-<ControlRow label="基地深度" value={`${siteHeight} m`}>
-<input disabled={anyLayerLocked} type="number" min={paper.height.toFixed(2)} step="0.1" value={siteHeight} onChange={e => setSiteHeight(Math.max(paper.height,Number(e.target.value)||paper.height))}/>
-</ControlRow>
-</div>
-<ControlRow label="樹冠規格">
-<select disabled={anyPlantLocked} value={crownHeight} onChange={e => setCrownHeight(Number(e.target.value))}>
+        {step >= 3 && <><p className="paper-note">{paper.short}｜底紙 {paper.width.toFixed(1)} × {paper.height.toFixed(1)} cm → 基地 {siteWidth.toFixed(1)} × {siteHeight.toFixed(1)} m（1:100{siteEnlargement===1?"":`，放大 ${siteEnlargement.toFixed(3)} 倍`}）</p><div className="tool-tabs">{[...(step===4?[["wall","牆體"]]:[]),["plant","植栽"],["section","剖面"],["layers","圖層"]].map(([id,label])=><button key={id} className={controlTab===id?"selected":""} onClick={()=>{setControlTab(id);setPlantingPlacementMode(null);setDrawingSection(false);setDraftSection([]);if(id==="plant"||id==="wall")setViewTab("plan");}}>{label}</button>)}</div>{step===4&&<div hidden={controlTab!=="wall"}>{wallEditor.controls(wallGuides,trees.map(t=>({x:(t.x-xOffset)/sitePreviewScale,y:(t.y-yOffset)/sitePreviewScale})))}</div>}<div hidden={controlTab!=="layers"}>
+<div style={{borderBottom:"1px solid #c9d2ca",paddingBottom:16,marginBottom:16}}><b>圖層鎖定</b>{step===4&&<label><input type="checkbox" checked={wallEditor.locked} onChange={e=>wallEditor.setLocked(e.target.checked)}/> 圍牆圖層</label>}<p style={{fontSize:14}}>底圖承接 STEP 01／02。鎖定圖層仍顯示，位置與配置不受其他植栽調整影響；共用基地尺寸及樹木規格需解鎖後修改。</p>{([{id:"array",label:"樹陣"},{id:"row",label:"樹列"},{id:"single",label:"孤植"},{id:"grove",label:"自然式叢植"},{id:"section",label:"剖面線"}] as const).map(layer=><label key={layer.id} style={{display:"flex",justifyContent:"space-between",padding:"8px 0",fontSize:16}}><span>{layer.label}</span><span><input type="checkbox" checked={layerLocks[layer.id]} onChange={()=>toggleLayer(layer.id)}/> {layerLocks[layer.id]?"已鎖定":"可編輯"}</span></label>)}<p style={{fontSize:14}}>直接拖曳藍色控制點即可選取植栽並持續定位；點選基地可連續移動目前植栽。「結束連續定位」或選取剖面即可切換操作。</p></div>
+</div><div hidden={controlTab!=="plant"}><div className="plant-specification">
+<div className="module-settings-title"><b>植栽立體規格</b><em>平面、剖面與軸測同步</em></div>
+<ControlRow label="樹冠幅與樹高（整形樹）">
+<select disabled={anyPlantLocked} value={treeHeight} onChange={e => {const h=Number(e.target.value);setTreeHeight(h);if(trunkHeight>=h)setTrunkHeight(h===4?3:4.5);}}>
 <option value="4">4 × 4 × 4 m</option>
 <option value="8">4 × 4 × 8 m</option>
 <option value="12">4 × 4 × 12 m</option>
 </select>
 </ControlRow>
-<ControlRow label="樹幹規格">
-<select disabled={anyPlantLocked} value={trunkHeight} onChange={e => setTrunkHeight(Number(e.target.value))}>
-<option value="1.5">幹徑 25 cm・枝下高 1.5 m</option>
-<option value="3">幹徑 25 cm・枝下高 3.0 m</option>
-<option value="4.5">幹徑 25 cm・枝下高 4.5 m</option>
-</select>
+<ControlRow label="胸徑 DBH" value={`${dbhCm} cm`}>
+<input disabled={anyPlantLocked} type="number" min="5" max="100" step="1" value={dbhCm} onChange={e=>setDbhCm(Math.max(5,Math.min(100,Number(e.target.value)||25)))}/>
 </ControlRow>
-</div><div hidden={controlTab!=="plant"}><div className="control-row">
+<ControlRow label="枝下高">
+<div className="paper-choice"><select disabled={anyPlantLocked} value={trunkHeight} onChange={e => setTrunkHeight(Number(e.target.value))}>
+<option value="1.5">枝下高 1.5 m</option>
+<option value="3">枝下高 3.0 m</option>
+{treeHeight>4.5&&<option value="4.5">枝下高 4.5 m</option>}
+</select><RatioInfo id="branch-height-experience" title={`枝下高 ${trunkHeight.toFixed(1)} m｜空間知覺與行為體驗`}><p>{branchExperiences[trunkHeight]}</p><p>枝下高改變林下視線、身體通行、遮蔭與圍合感；樹高維持 {treeHeight.toFixed(1)} m，樹冠垂直高度為 {(treeHeight-trunkHeight).toFixed(1)} m。</p></RatioInfo></div>
+</ControlRow>
+</div><div className="control-row">
 <span>
 <b>植栽配置模組</b>
 <em>可複選組合</em>
@@ -1014,9 +1034,16 @@ export default function Home() {
 <ControlRow label="孤植株數" value={`${singlePositions.length} 棵`}><input type="range" min="1" max="20" value={singlePositions.length} onChange={e => updateSingleCount(Number(e.target.value))}/></ControlRow>
 <div className="control-row"><span><b>孤植位置</b><em>第 {selectedSingleIndex + 1} 棵</em></span><div className="snap-navigator"><button aria-label="上一棵孤植" onClick={() => setSelectedSingleIndex(index => (index - 1 + singlePositions.length) % singlePositions.length)}>←</button><span>X {(singlePositions[selectedSingleIndex]?.x * siteWidth).toFixed(1)}・Y {(singlePositions[selectedSingleIndex]?.y * siteHeight).toFixed(1)} m<small>逐棵選取後指定位置</small></span><button aria-label="下一棵孤植" onClick={() => setSelectedSingleIndex(index => (index + 1) % singlePositions.length)}>→</button></div><button className={`snap-canvas ${plantingPlacementMode === "single" ? "selected" : ""}`} onClick={() => { setDrawingSection(false); setDraftSection([]); setPlantingPlacementMode(plantingPlacementMode === "single" ? null : "single"); }}>{plantingPlacementMode === "single" ? "結束連續定位" : "啟用連續定位"}</button></div>
 <div className="dimension-grid">{(["x","y"] as const).map(axis=><ControlRow key={axis} label={`${axis.toUpperCase()} 座標（m）`}><input type="number" step="0.1" min="0" max={axis==="x"?siteWidth:siteHeight} value={Number(((singlePositions[selectedSingleIndex] ?? {x:.5,y:.5})[axis]*(axis==="x"?siteWidth:siteHeight)).toFixed(2))} onChange={e=>updatePlantPosition("single",selectedSingleIndex,{...(singlePositions[selectedSingleIndex] ?? {x:.5,y:.5}),[axis]:Number(e.target.value)/(axis==="x"?siteWidth:siteHeight)})}/></ControlRow>)}</div></fieldset>}
+{plantingTypes.includes("grove") && plantPanel==="grove" && <fieldset disabled={layerLocks.grove} style={{border:0,padding:0,margin:0,minWidth:0}}>
+<div className="module-settings-title"><b>自然式叢植設定</b><em>設定 {groveCount}・實際 {placedTreeCounts.grove} 棵</em></div>
+<ControlRow label="叢植株數" value={`${groveCount} 棵`}><input type="range" min="3" max="20" value={groveCount} onChange={e=>setGroveCount(Number(e.target.value))}/></ControlRow>
+<ControlRow label="聚散範圍" value={`${groveSpread.toFixed(1)} m`}><input type="range" min="3" max={Math.max(3,Math.min(siteWidth,siteHeight)/2)} step="0.5" value={groveSpread} onChange={e=>setGroveSpread(Number(e.target.value))}/></ControlRow>
+<div className="placement-control"><span><b>叢植中心</b><em>X {(groveAnchor.x*siteWidth).toFixed(1)}・Y {(groveAnchor.y*siteHeight).toFixed(1)} m</em><small>以不等距、疏密交替形成自然式空間；仍維持每棵樹心位於基地內。</small></span><button className={plantingPlacementMode==="grove"?"selected":""} onClick={()=>{setDrawingSection(false);setDraftSection([]);setPlantingPlacementMode(plantingPlacementMode==="grove"?null:"grove");}}>{plantingPlacementMode==="grove"?"結束連續定位":"啟用連續定位"}</button></div>
+<div className="dimension-grid">{(["x","y"] as const).map(axis=><ControlRow key={axis} label={`${axis.toUpperCase()} 座標（m）`}><input type="number" step="0.1" min="0" max={axis==="x"?siteWidth:siteHeight} value={Number((groveAnchor[axis]*(axis==="x"?siteWidth:siteHeight)).toFixed(2))} onChange={e=>updatePlantPosition("grove",0,{...groveAnchor,[axis]:Number(e.target.value)/(axis==="x"?siteWidth:siteHeight)})}/></ControlRow>)}</div>
+</fieldset>}
 <div className="tree-array-note">
 <b>{plantingLabel}・目前 {trees.length} 棵</b>
-<small>{treeCountMessage}{plantingTypes.includes("row") && placedTreeCounts.row < rowRows * rowColumns ? ` 樹列因可用線段或弧長不足，僅配置 ${placedTreeCounts.row} 棵。` : ""} 樹木會維持冠幅與設定間距，超出基地時不再增加。</small>
+<small>{treeCountMessage}{plantingTypes.includes("row") && placedTreeCounts.row < rowRows * rowColumns ? ` 樹列因可用線段或弧長不足，僅配置 ${placedTreeCounts.row} 棵。` : ""} 僅限制樹幹中心位於基地內；4 m 樹冠可跨越基地邊界或牆面，平面與匯出會完整保留。</small>
 </div>
 <label className="dimension-toggle"><input type="checkbox" checked={showDimensions} onChange={e => setShowDimensions(e.target.checked)}/><span><b>顯示尺寸標註</b><small>顯示基地、分割區及樹間距，PNG 同步保留。</small></span></label>
 <button className="secondary clear-plantings" onClick={clearPlantings}>清除未鎖定植栽</button>
@@ -1074,12 +1101,12 @@ export default function Home() {
 </g>}
           {(step===1||step===2)&&showDimensions&&<DimensionOverlay regions={regions} paper={paper} x={xOffset} y={yOffset} width={displayWidth} height={displayHeight}/>}
           {step===2&&showDimensions&&<ArcDimensionOverlay arcs={showArcPreview&&editingArc!==null?arcs.filter((_,i)=>i!==editingArc):arcs} preview={showArcPreview ? activeArc : undefined} paper={paper} displayWidth={displayWidth}/>}
-          {step>=3&&showDimensions&&<DimensionOverlay regions={regions} paper={{ label: "1/100 A3 基地", short: "A3", width: siteWidth, height: siteHeight }} x={xOffset} y={yOffset} width={displayWidth} height={displayHeight} unit="m"/>}
+          {step>=3&&showDimensions&&<DimensionOverlay regions={regions} paper={{ label: "1:100 底紙對應基地", short: paper.short, width: siteWidth, height: siteHeight }} x={xOffset} y={yOffset} width={displayWidth} height={displayHeight} unit="m"/>}
           {step>=3&&<>
 <rect x={xOffset} y={yOffset} width={displayWidth} height={displayHeight} fill="url(#grid)"/>{trees.map((tree,i)=>
 <g key={i} transform={`translate(${tree.x} ${tree.y})`} filter="url(#shadow)">
 <circle r={Math.max(14,2/siteWidth*displayWidth)} fill="#395f45" fillOpacity=".88" stroke="#f7f3e8" strokeWidth="4"/>
-<circle r="5" fill="#16291e"/>
+<circle r={Math.max(2,dbhCm/200/siteWidth*displayWidth)} fill="#16291e"/>
 <path d="M -8 0 H 8 M 0 -8 V 8" stroke="#dbe5d6" strokeWidth="1.8" opacity=".8"/>
 </g>)}
 {showDimensions&&<TreeSpacingOverlay trees={trees} siteWidth={siteWidth} siteHeight={siteHeight} x={xOffset} y={yOffset} width={displayWidth} height={displayHeight}/>} 
@@ -1087,6 +1114,7 @@ export default function Home() {
           {step>=3 && plantingTypes.includes("row") && !layerLocks.row && !wallEditing && !drawingSection && !plantingPlacementMode && <g data-editor-overlay="true" pointerEvents="none" fill="none" stroke="#c96a12" strokeWidth="3" strokeDasharray="8 5">{effectiveRowGuide==="arc" && selectedRowArc ? <path d={arcSectorPath(selectedRowArc)}/> : selectedRowLine && <path d={selectedRowLine.axis==="vertical"?`M${selectedRowLine.value} ${selectedRowLine.from}V${selectedRowLine.to}`:`M${selectedRowLine.from} ${selectedRowLine.value}H${selectedRowLine.to}`}/>}</g>}
           {step>=3 && !drawingSection && !wallEditing && <g data-editor-overlay="true">
             {plantingTypes.includes("array") && !layerLocks.array && <circle cx={xOffset+arrayAnchor.x*displayWidth} cy={yOffset+arrayAnchor.y*displayHeight} r="16" fill="#e3f0ff" stroke="#1666ae" strokeWidth="3" style={{cursor:"grab",touchAction:"none"}} onClick={e=>e.stopPropagation()} onPointerDown={e=>beginPlantDrag(e,"array",0)}><title>拖曳樹陣中心；放開後可繼續點選基地定位</title></circle>}
+            {plantingTypes.includes("grove") && !layerLocks.grove && <circle cx={xOffset+groveAnchor.x*displayWidth} cy={yOffset+groveAnchor.y*displayHeight} r="16" fill="#e8f4df" stroke="#47753c" strokeWidth="3" style={{cursor:"grab",touchAction:"none"}} onClick={e=>e.stopPropagation()} onPointerDown={e=>beginPlantDrag(e,"grove",0)}><title>拖曳自然式叢植中心；樹心可貼齊基地邊界</title></circle>}
             {plantingTypes.includes("single") && !layerLocks.single && trees.filter(t=>t.type==="single").map((t,i)=><circle key={i} cx={t.x} cy={t.y} r="12" fill="#e3f0ff" stroke="#1666ae" strokeWidth="2" style={{cursor:"grab",touchAction:"none"}} onClick={e=>e.stopPropagation()} onPointerDown={e=>beginPlantDrag(e,"single",i)}><title>拖曳第 {i+1} 棵孤植</title></circle>)}
           </g>}
           {step>=3 && !drawingSection && !wallEditing && !layerLocks.row && trees.some(t=>t.type==="row") && (()=>{const t=trees.find(t=>t.type==="row")!;return <circle data-editor-overlay="true" cx={t.x} cy={t.y} r="16" fill="#fff0d9" stroke="#c96a12" strokeWidth="3" style={{cursor:"grab",touchAction:"none"}} onClick={e=>e.stopPropagation()} onPointerDown={beginRowDrag}><title>拖曳整組樹列：沿線微調／垂直偏移</title></circle>;})()}
@@ -1094,15 +1122,15 @@ export default function Home() {
           {step >= 3 && <SectionLines lines={sectionLines} selected={selectedSection} draft={draftSection} x={xOffset} y={yOffset} width={displayWidth} height={displayHeight} editable={!wallEditing && !layerLocks.section && !drawingSection && !plantingPlacementMode} select={selectSection} drag={beginSectionDrag}/>}
           {step===2&&showArcPreview&&<g data-editor-overlay="true" pointerEvents="none" stroke="#b96510" fill="#b96510"><path strokeDasharray="5 4" fill="none" d={`M${center.x} ${center.y}L${center.x+radius*Math.cos(activeSide.angle*Math.PI/180)} ${center.y+radius*Math.sin(activeSide.angle*Math.PI/180)}`}/><circle cx={center.x} cy={center.y} r="6"/><text x={center.x+10} y={center.y-10} stroke="white" strokeWidth="3" paintOrder="stroke" fontSize="14">圓心</text></g>}
           <DrawingScale bounds={planViewport.bounds} unitsPerSvg={step>=3?siteWidth/displayWidth:paper.width/displayWidth} unit={step>=3?'m':'cm'}/>
-          </svg>{pickCenter&&<div className="canvas-hint">點選畫布後，圓心會自動吸附到合法位置</div>}{focusEditing&&<div className="canvas-hint">請點選新的十字焦點位置</div>}{plantingPlacementMode&&<div className="canvas-hint">可連續點選基地或拖曳調整{plantingPlacementMode === "array" ? "樹陣中心" : `第 ${selectedSingleIndex + 1} 棵孤植`}位置</div>}</div>
+          </svg>{pickCenter&&<div className="canvas-hint">點選畫布後，圓心會自動吸附到合法位置</div>}{focusEditing&&<div className="canvas-hint">請點選新的十字焦點位置</div>}{plantingPlacementMode&&<div className="canvas-hint">可連續點選基地或拖曳調整{plantingPlacementMode === "array" ? "樹陣中心" : plantingPlacementMode === "grove" ? "自然式叢植中心" : `第 ${selectedSingleIndex + 1} 棵孤植`}位置；樹心可貼齊邊界，樹冠可外伸</div>}</div>
         <div className="canvas-footer">
 <p>
-<b>設計提示</b>{step===1?"避免所有分割線等距；保留主區域，讓色彩形成焦點與視覺重量。":step===2?"圓心僅能落在分割線、交點、底紙邊界／端點或外部延長線；弧形切到的每一個原有色塊，會改以三色系內的另一色呈現。":"樹陣不受色塊邊界限制，可自訂中心、行列數與雙向間距；樹列沿分割線、弧線或基地邊緣配置，孤植則逐棵定位。"}</p>
+<b>設計提示</b>{step===1?"避免所有分割線等距；保留主區域，讓色彩形成焦點與視覺重量。":step===2?"圓心僅能落在分割線、交點、底紙邊界／端點或外部延長線；弧形切到的每一個原有色塊，會改以三色系內的另一色呈現。":"樹陣建立理性秩序，樹列引導方向，孤植形成焦點，自然式叢植則以不等距與疏密交替塑造光影和空間氣氛。"}</p>
 <button className="export" onClick={exportImage}>匯出平面 PNG</button>
 </div>
-</div><div hidden={viewTab!=="section"}>        {step >= 3 && sectionLine.length === 2 && <SectionView walls={step===4?wallEditor.walls:[]} stage={step} label={selectedLine?.label ?? "A"} a={{x:sectionLine[0].x*siteWidth,y:sectionLine[0].y*siteHeight}} b={{x:sectionLine[1].x*siteWidth,y:sectionLine[1].y*siteHeight}} trees={trees.map(t => ({x:(t.x-xOffset)/displayWidth*siteWidth,y:(t.y-yOffset)/displayHeight*siteHeight}))} direction={sectionDirection} depth={sectionDepth} crownHeight={crownHeight} trunkHeight={trunkHeight} dimensions={showDimensions} download={downloadSvgAsPng}/>}
+</div><div hidden={viewTab!=="section"}>        {step >= 3 && sectionLine.length === 2 && <SectionView walls={step===4?wallEditor.walls.filter(w=>!w.hidden):[]} stage={step} label={selectedLine?.label ?? "A"} a={{x:sectionLine[0].x*siteWidth,y:sectionLine[0].y*siteHeight}} b={{x:sectionLine[1].x*siteWidth,y:sectionLine[1].y*siteHeight}} trees={trees.map(t => ({x:(t.x-xOffset)/displayWidth*siteWidth,y:(t.y-yOffset)/displayHeight*siteHeight}))} direction={sectionDirection} depth={sectionDepth} treeHeight={treeHeight} trunkHeight={trunkHeight} dbhCm={dbhCm} dimensions={showDimensions} download={downloadSvgAsPng}/>}
         {step>=3 && sectionLine.length!==2 && <p style={{padding:16,border:"1px dashed #9eafa2"}}>剖立面：請先新增並選取一條剖面線，即可查看垂直標註與匯出 PNG。</p>}
-</div><div hidden={viewTab!=="axon"}>        {step>=3 && <AxonView walls={step===4?wallEditor.walls:[]} stage={step} width={siteWidth} height={siteHeight} trees={trees.map(t=>({x:(t.x-xOffset)/displayWidth*siteWidth,y:(t.y-yOffset)/displayHeight*siteHeight}))} crownHeight={crownHeight} trunkHeight={trunkHeight} faces={colorFaces} colors={palette.colors} planBounds={{x:paperXOffset,y:paperYOffset,width:paperDisplayWidth,height:paperDisplayHeight}} download={downloadSvgAsPng}/>}
+</div><div hidden={viewTab!=="axon"}>        {step>=3 && <AxonView walls={step===4?wallEditor.walls.filter(w=>!w.hidden):[]} stage={step} width={siteWidth} height={siteHeight} trees={trees.map(t=>({x:(t.x-xOffset)/displayWidth*siteWidth,y:(t.y-yOffset)/displayHeight*siteHeight}))} treeHeight={treeHeight} trunkHeight={trunkHeight} dbhCm={dbhCm} faces={colorFaces} colors={palette.colors} planBounds={{x:paperXOffset,y:paperYOffset,width:paperDisplayWidth,height:paperDisplayHeight}} download={downloadSvgAsPng}/>}
 </div>      </div>
     </section>
     <footer>
