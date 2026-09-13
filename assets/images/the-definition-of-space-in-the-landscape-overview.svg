@@ -21,8 +21,8 @@
     <text x="213" y="185" transform="rotate(90 213 185)" text-anchor="middle" class="dim">29.7 cm</text>
     <text x="98" y="300" text-anchor="middle" class="note ink">A4：1:√2｜21.0 × 29.7 cm</text>
     <text x="98" y="322" text-anchor="middle" class="note ink">內裁切正方形：1:√1｜21.0 × 21.0 cm</text>
-    <text x="18" y="354" class="small muted">根號矩形・整數比・黃金比例</text>
-    <text x="18" y="377" class="small muted">尺寸與「版面幾何特性」快顯說明</text>
+    <text x="18" y="354" class="small muted">1:100 對應基地：21.0 × 21.0 m</text>
+    <text x="18" y="377" class="small muted">根號矩形・整數比・黃金比例快顯說明</text>
   </g>
 
   <g transform="translate(450 182)">
@@ -32,10 +32,12 @@
     <path d="M20 65h115v115H20z" class="red" opacity=".9"/><path d="M135 180h115v115H135z" class="blue" opacity=".9"/><path d="M20 295c0-127 103-230 230-230" class="yellow" opacity=".9"/>
     <path d="M20 295A230 230 0 0 0 250 65M20 180H250M135 65V295" class="line"/>
     <circle cx="135" cy="180" r="4" class="ink"/><path d="M125 180h20M135 170v20" class="line"/>
+    <text x="77.5" y="174" text-anchor="middle" class="note ink">10.5</text><text x="192.5" y="174" text-anchor="middle" class="note ink">10.5</text>
+    <text x="128" y="113" text-anchor="end" class="note ink">7.0</text><text x="128" y="223" text-anchor="end" class="note ink">7.0</text><text x="128" y="278" text-anchor="end" class="note ink">7.0</text>
     <path d="M20 316h230m-230 0 8-5m-8 5 8 5m222 0-8-5m8 5-8 5" class="thin"/>
-    <text x="135" y="337" text-anchor="middle" class="dim">21.0 m（1:100）</text>
-    <text x="20" y="370" class="small muted">圓心、半徑與角度；可貼齊分割線、</text>
-    <text x="20" y="393" class="small muted">交點、邊界／端點與外部延長線。</text>
+    <text x="135" y="337" text-anchor="middle" class="dim">基地 21.0 × 21.0 m（1:100）</text>
+    <text x="20" y="370" class="small muted">水平 10.5 + 10.5 m（1:1）；</text>
+    <text x="20" y="393" class="small muted">垂直 7.0 + 7.0 + 7.0 m（1:1:1）。</text>
   </g>
 
   <g transform="translate(820 182)">
@@ -45,7 +47,7 @@
     <path d="M20 65h115v115H20z" class="red" opacity=".82"/><path d="M135 180h115v115H135z" class="blue" opacity=".82"/><path d="M20 295c0-127 103-230 230-230" class="yellow" opacity=".84"/>
     <g fill="#bcd1b5" stroke="#36543e" stroke-width="3"><circle cx="62" cy="109" r="29"/><circle cx="110" cy="109" r="29"/><circle cx="158" cy="109" r="29"/><circle cx="206" cy="109" r="29"/><circle cx="174" cy="225" r="29"/><circle cx="211" cy="239" r="23"/><circle cx="192" cy="197" r="22"/></g>
     <g stroke="#36543e" stroke-width="4"><path d="M62 138v17M110 138v17M158 138v17M206 138v17M174 254v17M211 262v15M192 219v15"/></g>
-    <text x="20" y="327" class="note ink">整形樹：樹冠幅 4 m × 4 m</text>
+    <text x="20" y="327" class="note ink">基地 21.0 × 21.0 m｜整形樹：樹冠幅 4 m × 4 m</text>
     <text x="20" y="349" class="note ink">樹高 4 / 8 / 12 m｜DBH 25 cm</text>
     <text x="20" y="371" class="note ink">枝下高 1.5 / 3.0 / 4.5 m</text>
     <text x="20" y="397" class="small muted">樹陣・樹列・孤植・自然式叢植</text>
@@ -61,7 +63,7 @@
     <path d="M130 82h10M35 178v-16M235 162v16" stroke="#f8f6ee" stroke-width="16"/>
     <path d="M35 82H130M140 82H235M35 278V178M235 178V278M80 150H190M80 150v76" class="dash"/>
     <path d="M72 255h106" stroke="#263b30" stroke-width="2" marker-end="url(#arrow)"/><text x="125" y="246" text-anchor="middle" class="note ink">移動牆段</text>
-    <text x="20" y="327" class="note ink">牆高 ≤ 2.4 m｜四邊實牆可調為開口</text>
+    <text x="20" y="327" class="note ink">基地 21.0 × 21.0 m｜牆高 ≤ 2.4 m</text>
     <text x="20" y="349" class="note ink">移動牆段總長 ≤ 原始總長 25%</text>
     <text x="20" y="371" class="note ink">全部開口總面積 ≤ 12 m²（愈少愈好）</text>
     <text x="20" y="397" class="small muted">固定原始配置後啟用限制；超額即拒絕。</text>
