@@ -13,7 +13,7 @@
 
 ## 核心功能
 
-![核心功能圖｜構圖、弧線、植栽與牆體](https://raw.githubusercontent.com/tony428tw/The-Definition-of-Space-in-the-Landscape/main/assets/images/the-definition-of-space-in-the-landscape-core-features.png?v=20260914)
+![核心功能圖｜構圖、弧線、植栽與牆體](assets/images/the-definition-of-space-in-the-landscape-core-features.jpg)
 
 ### STEP 01｜水平・垂直分割
 
