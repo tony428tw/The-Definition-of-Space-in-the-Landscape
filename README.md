@@ -13,7 +13,7 @@
 
 ## 核心功能
 
-![功能說明圖](assets/images/the-definition-of-space-in-the-landscape-overview.jpg)
+![功能說明圖｜21.0 × 21.0 m 基地與分割比例](https://raw.githubusercontent.com/tony428tw/The-Definition-of-Space-in-the-Landscape/main/assets/images/the-definition-of-space-in-the-landscape-overview.jpg?v=20260914)
 
 ### STEP 01｜水平・垂直分割
 
